@@ -10,17 +10,20 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 public class SimpleConsumer {
 
-    private static Consumer<Long, String> createConsumer(String server, String topicName, String groupName) {
+    private static Consumer<Long, String> createConsumer(Map<String, String> inProps, String server, String topicName, String groupName) {
 
         final Properties props = new Properties();
+
+        props.putAll(inProps);
+
         props.put("enable.auto.commit", "false");
         props.put("auto.offset.reset", "earliest");
-//        props.put("session.timeout.ms", "30000");
-//        props.put("max.poll.records", "1");
+        props.put("max.poll.records", "1");
 
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
                 server);
@@ -32,7 +35,6 @@ public class SimpleConsumer {
                 StringDeserializer.class.getName());
 
 
-        // Create the consumer using props.
         final Consumer<Long, String> consumer =
                 new KafkaConsumer<>(props);
 
@@ -41,15 +43,11 @@ public class SimpleConsumer {
         consumer.assign(tps);
         consumer.seekToBeginning(tps);
 
-        // Subscribe to the topic.
-//        List<String> tps = Collections.singletonList(LastTestConsts.TOPIC_NAME);
-//        consumer.subscribe(tps);
-//        consumer.seekToBeginning(tps);
         return consumer;
     }
 
-    static void runConsumer(String server, String topicName, String groupName) throws InterruptedException {
-        final Consumer<Long, String> consumer = createConsumer(server, topicName, groupName);
+    static void runConsumer(Map<String, String> inProps, String server, String topicName, String groupName) {
+        final Consumer<Long, String> consumer = createConsumer(inProps, server, topicName, groupName);
 
         final int giveUp = 100;
         int noRecordsCount = 0;
@@ -58,9 +56,7 @@ public class SimpleConsumer {
             ConsumerRecords<Long, String> consumerRecords = null;
 
             try {
-                System.out.println("START");
-                consumerRecords = consumer.poll(100);
-                System.out.println("END");
+                consumerRecords = consumer.poll(1000);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -76,11 +72,11 @@ public class SimpleConsumer {
                         record.key(), record.value(),
                         record.partition(), record.offset());
             });
-            //break;
+
             consumer.commitAsync();
+            break;
         }
         consumer.close();
-        System.out.println("DONE");
     }
 
 }
